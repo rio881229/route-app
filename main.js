@@ -6,47 +6,55 @@ let points = [];
 let markers = [];
 let routeLine = null;
 
-function addRandomPoint() {
-  let lat = 25.02 + Math.random() * 0.03;
-  let lng = 121.55 + Math.random() * 0.03;
-  let marker = L.marker([lat, lng]).addTo(map);
+async function geocode(addr){
+  let url = "https://nominatim.openstreetmap.org/search?format=json&q=" + encodeURIComponent(addr);
+  let r = await fetch(url);
+  let j = await r.json();
+  return j.length ? [parseFloat(j[0].lat), parseFloat(j[0].lon)] : null;
+}
+
+async function addAddress(){
+  let addr = document.getElementById("addr").value;
+  if(!addr) return;
+  let pos = await geocode(addr);
+  if(!pos){ alert("找不到此地址"); return; }
+  let marker = L.marker(pos).addTo(map).bindPopup(addr);
   markers.push(marker);
-  points.push([lat, lng]);
+  points.push(pos);
+  map.setView(pos,15);
 }
 
-function calculateDistance(a, b) {
-  const R = 6371;
-  const dLat = (b[0]-a[0]) * Math.PI/180;
-  const dLng = (b[1]-a[1]) * Math.PI/180;
-  const lat1 = a[0]*Math.PI/180;
-  const lat2 = b[0]*Math.PI/180;
-
-  const h = Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLng/2)**2;
-  return 2 * R * Math.asin(Math.sqrt(h));
+function dist(a,b){
+  const R=6371;
+  const dLat=(b[0]-a[0])*Math.PI/180;
+  const dLng=(b[1]-a[1])*Math.PI/180;
+  const lat1=a[0]*Math.PI/180;
+  const lat2=b[0]*Math.PI/180;
+  const h=Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLng/2)**2;
+  return 2*R*Math.asin(Math.sqrt(h));
 }
 
-function nearestNeighborRoute(pts) {
-  if (pts.length === 0) return [];
-  let unvisited = pts.slice();
-  let route = [unvisited.shift()];
-  while (unvisited.length) {
-    let last = route[route.length-1];
-    let idx = 0;
-    let best = Infinity;
-    for (let i=0;i<unvisited.length;i++){
-      let d = calculateDistance(last, unvisited[i]);
-      if (d < best) { best = d; idx = i; }
+function NN(pts){
+  if(!pts.length) return [];
+  let u=pts.slice();
+  let route=[u.shift()];
+  while(u.length){
+    let last=route[route.length-1];
+    let best=0, bestD=Infinity;
+    for(let i=0;i<u.length;i++){
+      let d=dist(last,u[i]);
+      if(d<bestD){ bestD=d; best=i; }
     }
-    route.push(unvisited.splice(idx,1)[0]);
+    route.push(u.splice(best,1)[0]);
   }
   return route;
 }
 
-function calculateRoute() {
-  if (routeLine) map.removeLayer(routeLine);
-  let route = nearestNeighborRoute(points);
-  if (route.length > 1) {
-    routeLine = L.polyline(route, {weight:4}).addTo(map);
+function calculateRoute(){
+  if(routeLine) map.removeLayer(routeLine);
+  let r=NN(points);
+  if(r.length>1){
+    routeLine=L.polyline(r,{weight:4}).addTo(map);
     map.fitBounds(routeLine.getBounds());
   }
 }

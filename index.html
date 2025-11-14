@@ -14,13 +14,16 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <style>
     body { margin:0; font-family: sans-serif; }
-    #map { width:100vw; height:90vh; }
+    #map { width:100vw; height:75vh; }
     #controls { padding:10px; }
+    input { padding:6px; width:70%; }
+    button { padding:6px; }
   </style>
 </head>
 <body>
   <div id="controls">
-    <button onclick="addRandomPoint()">新增示範配送點</button>
+    <input id="addr" placeholder="輸入地址或店名，例如：台北101">
+    <button onclick="addAddress()">加入配送點</button>
     <button onclick="calculateRoute()">計算路線</button>
   </div>
   <div id="map"></div>
